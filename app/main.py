@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, render_template, request, jsonify
+from flask import Flask, redirect, url_for, render_template, request, jsonify, Response
 import os
 import config
 from models import db, File, get_file_hash, initialize_bed_files
@@ -141,6 +141,38 @@ def find_similar(file_id):
 
     return render_template("similar_files.html", file_id=file_id, matches=similarities[:num_matches],
                            num_matches=str(num_matches), skip_self=str(skip_self))
+
+
+@app.route('/file/<int:file_id>', methods=['GET'])
+def file_details(file_id):
+    file = File.query.get(file_id)
+    if not file:
+        return jsonify({"error": "File not found"}), 404
+
+    bed_content = read_file_from_minio(file.minio_key)
+
+    return render_template(
+        "file_details.html",
+        filename=file.filename,
+        file_id=file.id,
+        content=bed_content,
+        num_matches=request.args.get('num_matches', 5),
+        skip_self=request.args.get('skip_self', 'true')
+    )
+
+
+@app.route('/download/<int:file_id>', methods=['GET'])
+def download_file(file_id):
+    file = File.query.get(file_id)
+    if not file:
+        return jsonify({"error": "File not found"}), 404
+
+    bed_content = read_file_from_minio(file.minio_key)
+
+    response = Response(bed_content, mimetype="text/plain")
+    response.headers["Content-Disposition"] = f"attachment; filename={file.filename}"
+
+    return response
 
 
 if __name__ == '__main__':
