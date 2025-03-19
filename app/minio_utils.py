@@ -24,4 +24,6 @@ def upload_file_to_minio(file_path, minio_key):
     return f"{config.MINIO_ENDPOINT}/{config.MINIO_BUCKET}/{minio_key}"
 
 
-
+def read_file_from_minio(minio_key):
+    obj = s3.get_object(Bucket=config.MINIO_BUCKET, Key=minio_key)
+    return obj["Body"].read().decode("utf-8")
