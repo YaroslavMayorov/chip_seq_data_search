@@ -1,7 +1,7 @@
 from flask import Flask, redirect, url_for, render_template, request, jsonify
 import os
 import config
-from models import db, File, get_file_hash
+from models import db, File, get_file_hash, initialize_bed_files
 from minio_utils import upload_file_to_minio, read_file_from_minio
 import uuid
 import tempfile
@@ -14,6 +14,7 @@ db.init_app(app)
 
 with app.app_context():
     db.create_all()
+    initialize_bed_files()
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
