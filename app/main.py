@@ -1,26 +1,35 @@
 from flask import Flask, redirect, url_for, render_template, request, jsonify, Response
 import os
 import config
-from models import db, File, get_file_hash, initialize_bed_files
+from models import db, File, get_file_hash, initialize_main_bed_files
 from minio_utils import upload_file_to_minio, read_file_from_minio
 import uuid
 import tempfile
 import subprocess
 
+# Creating an instance of a Flash app
 app = Flask(__name__)
 
+# Database configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = config.DB_URL
 db.init_app(app)
 
+# Creating tables in the database and initializing the main BED files
 with app.app_context():
     db.create_all()
-    initialize_bed_files()
+    initialize_main_bed_files()
 
+# File download directory (temporary)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Consts
+INIT_NUM = 5
+PORT = 5000
+
 
 def sort_bed(input_bed_str):
+    """ Accepts the contents of the BED as a string, returns the same string, but sorted. """
     with tempfile.NamedTemporaryFile(mode='w', suffix=".bed", delete=False) as tmp_in:
         tmp_in.write(input_bed_str)
         tmp_in.flush()
@@ -45,6 +54,10 @@ def sort_bed(input_bed_str):
 
 
 def jaccard_bedtools_in_memory(bed1_content, bed2_content):
+    """
+    Runs 'bedtools jaccard' for two string contents of BED files,
+    returns the jaccard index (float).
+    """
     with tempfile.NamedTemporaryFile(mode='w', suffix=".bed", delete=False) as f1:
         f1.write(bed1_content)
         f1.flush()
@@ -79,6 +92,7 @@ def jaccard_bedtools_in_memory(bed1_content, bed2_content):
 @app.route('/')
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
+    """ File upload handler. """
     if request.method == "GET":
         return render_template("upload.html")
 
@@ -95,16 +109,19 @@ def upload_file():
     uploaded_file.save(file_path)
     file_hash = get_file_hash(file_path)
 
+    # Check if the file already exists in the database
     existing_file = File.query.filter_by(file_hash=file_hash).first()
     if existing_file:
         os.remove(file_path)
         return redirect(url_for('find_similar', file_id=existing_file.id, num_matches=num_matches, skip_self="false"))
 
+    # Uploading a file to the cloud storage (MinIO)
     minio_key = f"{uuid.uuid4()}.bed"
     upload_file_to_minio(file_path, minio_key)
 
     os.remove(file_path)
 
+    # Add a new file to the database
     new_file = File(filename=uploaded_file.filename, file_hash=file_hash, minio_key=minio_key)
     db.session.add(new_file)
     db.session.commit()
@@ -114,9 +131,10 @@ def upload_file():
 
 @app.route('/find_similar/<int:file_id>', methods=['GET'])
 def find_similar(file_id):
+    """ Finds files similar to the uploaded one using the jaccard index. """
     skip_self = request.args.get('skip_self', '1')
     skip_self = int(skip_self)
-    num_matches = int(request.args.get('num_matches', 5))
+    num_matches = int(request.args.get('num_matches', INIT_NUM))
 
     file = File.query.get(file_id)
     if not file:
@@ -126,17 +144,19 @@ def find_similar(file_id):
     bed1_sorted = sort_bed(bed1_content)
 
     similarities = []
+    # Go through all the files in the database
     for db_file in File.query.all():
         if skip_self and db_file.id == file_id:
             continue
 
         bed2_content = read_file_from_minio(db_file.minio_key)
-
         bed2_sorted = sort_bed(bed2_content)
 
+        # Calculate the jaccard coefficient between the uploaded file and the current file
         jaccard_score = jaccard_bedtools_in_memory(bed1_sorted, bed2_sorted)
         similarities.append((db_file.id, db_file.filename, jaccard_score))
 
+    # Sort by descending jaccard index
     similarities.sort(key=lambda x: x[2], reverse=True)
 
     return render_template("similar_files.html", file_id=file_id, matches=similarities[:num_matches],
@@ -145,6 +165,7 @@ def find_similar(file_id):
 
 @app.route('/file/<int:file_id>', methods=['GET'])
 def file_details(file_id):
+    """Shows the contents of the file """
     file = File.query.get(file_id)
     if not file:
         return jsonify({"error": "File not found"}), 404
@@ -156,13 +177,14 @@ def file_details(file_id):
         filename=file.filename,
         file_id=file.id,
         content=bed_content,
-        num_matches=request.args.get('num_matches', 5),
+        num_matches=request.args.get('num_matches', INIT_NUM),
         skip_self=request.args.get('skip_self', 'true')
     )
 
 
 @app.route('/download/<int:file_id>', methods=['GET'])
 def download_file(file_id):
+    """ Allows to download a PDF file. """
     file = File.query.get(file_id)
     if not file:
         return jsonify({"error": "File not found"}), 404
@@ -176,4 +198,4 @@ def download_file(file_id):
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=PORT, debug=True)
