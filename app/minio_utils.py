@@ -1,6 +1,8 @@
 import boto3
+import botocore.exceptions
 import config
 
+# Create a client to interact with MinIO
 s3 = boto3.client(
     "s3",
     endpoint_url=config.MINIO_ENDPOINT,
@@ -9,11 +11,15 @@ s3 = boto3.client(
 )
 
 
+# Create a storage in MinIO, if there is none
 def create_bucket():
     try:
         s3.head_bucket(Bucket=config.MINIO_BUCKET)
-    except:
-        s3.create_bucket(Bucket=config.MINIO_BUCKET)
+    except botocore.exceptions.ClientError as e:
+        if e.response["Error"]["Code"] == "404":
+            s3.create_bucket(Bucket=config.MINIO_BUCKET)
+        else:
+            raise
 
 
 create_bucket()
