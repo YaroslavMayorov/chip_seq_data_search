@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, render_template, request, jsonify, Response
+from flask import Flask, redirect, url_for, render_template, request, jsonify, Response, flash
 import os
 import config
 from models import db, File, get_file_hash, initialize_main_bed_files
@@ -9,6 +9,7 @@ import subprocess
 
 # Creating an instance of a Flash app
 app = Flask(__name__)
+app.secret_key = "your_secret_key"
 
 # Database configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = config.DB_URL
@@ -26,6 +27,18 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Consts
 INIT_NUM = 5
 PORT = 5000
+
+
+@app.errorhandler(404)
+def not_found(error):
+    """ Error handler 404 (Page not found)"""
+    return render_template("error.html", error_message="404 Not found: Page not found."), 404
+
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    """ Error handler 500 (Internal server error) """
+    return render_template("error.html", error_message="500 Internal server error: Internal server error."), 500
 
 
 def sort_bed(input_bed_str):
@@ -97,13 +110,15 @@ def upload_file():
         return render_template("upload.html")
 
     if 'file' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
+        flash("Error: No file uploaded!", "danger")
+        return redirect(url_for("upload_file"))
 
     uploaded_file = request.files['file']
     num_matches = request.form.get('num_matches')
 
     if not uploaded_file.filename.endswith('.bed'):
-        return jsonify({"error": "Only .bed files are allowed!"}), 400
+        flash("Error: Only .bed files allowed!", "danger")
+        return redirect(url_for("upload_file"))
 
     file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.filename)
     uploaded_file.save(file_path)
@@ -113,7 +128,7 @@ def upload_file():
     existing_file = File.query.filter_by(file_hash=file_hash).first()
     if existing_file:
         os.remove(file_path)
-        return redirect(url_for('find_similar', file_id=existing_file.id, num_matches=num_matches, skip_self="false"))
+        return redirect(url_for('find_similar', file_id=existing_file.id, num_matches=num_matches, skip_self="0"))
 
     # Uploading a file to the cloud storage (MinIO)
     minio_key = f"{uuid.uuid4()}.bed"
@@ -138,7 +153,9 @@ def find_similar(file_id):
 
     file = File.query.get(file_id)
     if not file:
-        return jsonify({"error": "File not found"}), 404
+        return render_template("similar_files.html", file_id=file_id, matches='',
+                               num_matches=str(num_matches), skip_self=str(skip_self),
+                               error_message="Error: File not found."), 404
 
     bed1_content = read_file_from_minio(file.minio_key)
     bed1_sorted = sort_bed(bed1_content)
@@ -168,7 +185,13 @@ def file_details(file_id):
     """Shows the contents of the file """
     file = File.query.get(file_id)
     if not file:
-        return jsonify({"error": "File not found"}), 404
+        return render_template("file_details.html",
+                               filename=file.filename,
+                               file_id=file.id,
+                               content="",
+                               num_matches=request.args.get('num_matches', INIT_NUM),
+                               skip_self=request.args.get('skip_self', 'true'),
+                               error_message="Error: File not found."), 404
 
     bed_content = read_file_from_minio(file.minio_key)
 
@@ -178,7 +201,8 @@ def file_details(file_id):
         file_id=file.id,
         content=bed_content,
         num_matches=request.args.get('num_matches', INIT_NUM),
-        skip_self=request.args.get('skip_self', 'true')
+        skip_self=request.args.get('skip_self', 'true'),
+        error_message=""
     )
 
 
@@ -187,7 +211,8 @@ def download_file(file_id):
     """ Allows to download a PDF file. """
     file = File.query.get(file_id)
     if not file:
-        return jsonify({"error": "File not found"}), 404
+        flash("Error: Can't download. File not found!", "danger")
+        return redirect(request.referrer or url_for("upload_file"))
 
     bed_content = read_file_from_minio(file.minio_key)
 
