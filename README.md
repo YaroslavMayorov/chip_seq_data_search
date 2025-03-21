@@ -145,7 +145,7 @@ I really want to join your team, because this topic is really close to me. I am 
 </details>
 
 </details> <details> <summary><strong>Where are files stored?</strong></summary>
-Uploaded files are stored in MinIO. You can see it on [localhost:9090](http://localhost:9090/) . Sign in with MINIO_ROOT_USER as login and MINIO_ROOT_PASSWORD as password (they are in docker-compose.yml). 
+Uploaded files are stored in MinIO. You can see it on <a href="http://localhost:9090" target="_blank">MinIO Dashboard</a>. Sign in with MINIO_ROOT_USER as login and MINIO_ROOT_PASSWORD as password (they are in docker-compose.yml). 
 
 </details>
 
