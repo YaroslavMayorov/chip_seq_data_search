@@ -81,7 +81,7 @@ cd chip_seq_data_search
 
 1. **Start the application:**
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 2. **Open a browser:**
@@ -107,7 +107,7 @@ docker-compose up -d --build
 Close and removes images and containers associated with the project:
 
 ```bash
-docker-compose down -v --rmi all --remove-orphans
+docker compose down -v --rmi all --remove-orphans
 ```
 
 Removes all build cache:
@@ -132,6 +132,22 @@ Recently, I developed my wallpaper Telegram bot, @InspireWallBot, so I know how 
 I also completed a data analysis course from Tinkoff and a machine learning specialization from Yandex, which gave me valuable experience working with data visualization. In addition, I prepared for the DANO Olympiad in data analysis, so I have a solid understanding of statistics, data processing, and interpretation.
 
 I really want to join your team, because this topic is really close to me. I am ready to learn new things and help develop a useful tool for biological data research. I would be grateful for the opportunity to be part of this project!
+</details>
+
+<details>
+<summary><strong> Command "docker-compose" not found. </strong></summary>
+
+   Linux: 
+   ```bash
+   sudo apt update
+   sudo apt install docker-compose
+   ```
+
+    MacOs: 
+    ```bash
+   brew install docker-compose
+   ```
+  
 </details>
 
 <details>
