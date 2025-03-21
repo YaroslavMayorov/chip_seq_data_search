@@ -151,7 +151,7 @@ MacOs:
 </details>
 
 <details>
-<summary><strong> What if port is unavailable?</strong></summary>
+<summary><strong> What if port is unavailable / address already in use?</strong></summary>
 
    By default app is on 5001, postgre is on 5432, and minIO is on 9000, 9090. Change the port in `docker-compose.yml`:
    ```bash
