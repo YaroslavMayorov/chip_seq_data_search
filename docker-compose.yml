@@ -32,6 +32,8 @@ services:
       - minio
     ports:
       - "5001:5000"
+    environment:
+      FLASK_SECRET_KEY: supersecret
 
 volumes:
   pg_data:

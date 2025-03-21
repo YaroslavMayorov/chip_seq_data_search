@@ -21,7 +21,7 @@ logger.info("TEST log statement: main.py has started.")
 
 # Creating an instance of a Flash app
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "insecure_default")
 
 # Database configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = config.DB_URL
