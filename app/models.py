@@ -6,10 +6,18 @@ import hashlib
 import os
 import uuid
 from minio_utils import upload_file_to_minio
+import logging
+import sys
 
-app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = config.DB_URL
-db = SQLAlchemy(app)
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
+logger = logging.getLogger(__name__)
+
+db = SQLAlchemy()
 
 # Consts
 CHUNK_SIZE = 4096
@@ -46,14 +54,14 @@ def get_file_hash(file_path):
 def initialize_main_bed_files():
     for file_path in BED_FILES:
         if not os.path.exists(file_path):
-            print(f"File {file_path} not found, skip it.")
+            logger.info(f"File {file_path} not found, skip it.")
             continue
 
         file_hash = get_file_hash(file_path)
 
         existing_file = File.query.filter_by(file_hash=file_hash).first()
         if existing_file:
-            print(f"{file_path} is already in db, skip it.")
+            logger.info(f"{file_path} is already in db, skip it.")
             continue
 
         minio_key = f"{uuid.uuid4()}.bed"
@@ -63,4 +71,4 @@ def initialize_main_bed_files():
         db.session.add(new_file)
 
     db.session.commit()
-    print("5 main db files uploaded!")
+    logger.info("5 main db files uploaded!")
