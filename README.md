@@ -143,7 +143,7 @@ I really want to join your team, because this topic is really close to me. I am 
    sudo apt install docker-compose
 ```
 
-    MacOs: 
+MacOs: 
 ```bash
    brew install docker-compose
 ```
