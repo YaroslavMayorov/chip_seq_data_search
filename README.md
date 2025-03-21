@@ -16,9 +16,11 @@
 
 This project is a genomic interval lookup service that allows users to upload a BED file to database and find the most similar files using the Jaccard index as a similarity measure.
 
-![](image/x.png)
+![](images/main_page.png)
 
-![](image/x.png)
+![](images/top_similar.png)
+
+![](images/file_page.png)
 
 ---
 
