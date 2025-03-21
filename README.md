@@ -138,15 +138,15 @@ I really want to join your team, because this topic is really close to me. I am 
 <summary><strong> Command "docker-compose" not found. </strong></summary>
 
    Linux: 
-   ```bash
+```bash
    sudo apt update
    sudo apt install docker-compose
-   ```
+```
 
     MacOs: 
-    ```bash
+```bash
    brew install docker-compose
-   ```
+```
   
 </details>
 
